@@ -37,6 +37,8 @@ docker compose logs -f db-init
 
 ### 2. Aplicar migraciones SQL
 
+Ejecutar en orden sobre la base `FinPerf` recién creada por `db-init`:
+
 ```bash
 docker exec -i finperf-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'FinPerf_Dev_2026!' -C -b < db/migrations/01_indexes_and_constraints.sql
 docker exec -i finperf-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'FinPerf_Dev_2026!' -C -b < db/migrations/02_portfolio_daily_performance.sql
@@ -98,7 +100,7 @@ Abrir `http://localhost:5173`. Si la API corre en otra URL, definir `VITE_API_BA
 3. **Definición de ITD:** parte desde `Portfolio.InceptionDate` hasta `asOf`.
 4. **Rango válido de fechas:** se valida contra el rango real disponible para el portafolio (`MIN(AsOfDate)` y `MAX(AsOfDate)` en `PortfolioDailyPerformance`), retornando `400 Bad Request` con `ProblemDetails` fuera de ese rango o cuando `from > to`, y `404 Not Found` si el portafolio no existe.
 5. **Moneda:** todos los portafolios de prueba operan en `CLP`; el formateo en pantalla aplica formato chileno (`es-CL`).
-6. **Retornos diarios extremos (`r <= -100%`):** en los datos sintéticos el retorno diario se mueve en `[-1,98%, +2,02%]`. Aun así, tanto `PerformanceCalculator` (C#) como los procedimientos SQL tratan cualquier día con `1 + r <= 0` como pérdida total acumulada (`-100%`) para mantener ambas rutas consistentes.
+6. **Retornos diarios extremos (`r >= -100%`):** en los datos sintéticos el retorno diario se mueve en `[-1,98%, +2,02%]`. Tanto `PerformanceCalculator` (C#) como los procedimientos SQL coinciden para cualquier retorno `r >= -1` (incluida pérdida total de `-100%`); retornos inferiores a `-100%` (posiciones apalancadas) quedan fuera del alcance del modelo.
 
 ---
 

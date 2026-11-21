@@ -117,8 +117,8 @@ ORDER BY AsOfDate;
 
 Todas las consultas operan muy por debajo del objetivo orientativo de 200 ms.
 
-### Nota sobre retornos diarios extremos (`r <= -100%`)
-En el conjunto sintético los retornos diarios oscilan entre `-1,98%` y `+2,02%`, por lo que `1 + DailyReturn` siempre es estrictamente positivo. Para mantener consistencia entre SQL y C# ante un eventual día con pérdida total (`DailyReturn <= -1`), `LogReturn` se guarda como `NULL` cuando `1 + DailyReturn <= 0` y los procedimientos SQL devuelven `-1.0` (`-100%`) al detectar `MIN(1.0 + DailyReturn) <= 0.0`, replicando el comportamiento de la multiplicación directa en C#.
+### Nota sobre retornos diarios extremos (`r >= -100%`)
+En el conjunto sintético los retornos diarios oscilan entre `-1,98%` y `+2,02%`, por lo que `1 + DailyReturn` siempre es estrictamente positivo. Para `r = -1` (`-100%`, pérdida total), `LogReturn` se guarda como `NULL` y los procedimientos SQL devuelven `-1.0` (`-100%`), coincidiendo con la multiplicación directa en C#. Retornos inferiores a `-100%` (exposiciones apalancadas) quedan fuera del alcance de este modelo.
 
 ---
 
