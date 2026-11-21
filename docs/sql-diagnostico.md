@@ -19,6 +19,7 @@ EXEC dbo.usp_GetPerformance @PortfolioId = 7, @Year = 2023;
 | **Total SP** | — | — | **16.351.886** | **95.525** | **21.798** |
 
 ### Operadores clave del plan de ejecución base
+El plan de ejecución estimado completo está adjunto en `docs/plan-base.sqlplan` (obtenido con `SET SHOWPLAN_XML ON` sobre `EXEC dbo.usp_GetPerformance @PortfolioId = 7, @Year = 2023;`). Sus principales cuellos de botella son:
 - `Clustered Index Scan` completo sobre `PK__Position__...` (identidad `PositionDailyId`) repetido en la subconsulta de días distintos, en la subconsulta correlacionada de `PnLMes` y en la consulta de YTD.
 - `Index Spool` sobre un `Clustered Index Scan` de toda la tabla para resolver `dbo.fn_PortfolioDailyReturn` (aun con scalar UDF inlining en SQL Server 2022, el predicado no SARGable impide un seek directo).
 - `Filter` con conversión `CONVERT(varchar(10), AsOfDate, 120) = CONVERT(varchar(10), @Date, 120)` evaluada fila a fila.
@@ -66,24 +67,58 @@ Todos los scripts están en `db/migrations/` sin alterar `db/01_schema_y_datos.s
 
 ## 4. Medición después de los cambios
 
-Ejecutado con `SET STATISTICS IO, TIME ON` sobre `PortfolioId = 7`:
+### 4.1 Procedimientos SQL optimizados (`db/migrations/03_performance_queries.sql`)
+
+Comandos ejecutados para reproducir la medición:
+
+```sql
+SET STATISTICS IO, TIME ON;
+EXEC dbo.usp_GetPortfolioPerformanceSummary @PortfolioId = 7, @AsOfDate = '2023-08-15';
+EXEC dbo.usp_GetPortfolioPerformanceRange   @PortfolioId = 7, @FromDate = '2023-01-01', @ToDate = '2023-12-31';
+EXEC dbo.usp_GetPortfolioPerformanceMonthly @PortfolioId = 7, @FromDate = '2023-01-01', @ToDate = '2023-12-31';
+```
 
 | Procedimiento | Parámetros | Scans | Logical reads | CPU (ms) | Elapsed (ms) |
 |---|---|---:|---:|---:|---:|
 | `usp_GetPortfolioPerformanceSummary` | `@PortfolioId = 7, @AsOfDate = '2023-08-15'` | 4 | 37 (`35` + `2`) | 1 | 1 |
-| `usp_GetPortfolioPerformanceRange` | `@PortfolioId = 7, @From = '2023-01-01', @To = '2023-12-31'` | 1 | 6 | 0 | 0 |
-| `usp_GetPortfolioPerformanceMonthly` | `@PortfolioId = 7, @From = '2023-01-01', @To = '2023-12-31'` | 1 | 6 | 0 | 0 |
+| `usp_GetPortfolioPerformanceRange` | `@PortfolioId = 7, @FromDate = '2023-01-01', @ToDate = '2023-12-31'` | 1 | 6 | 0 | 0 |
+| `usp_GetPortfolioPerformanceMonthly` | `@PortfolioId = 7, @FromDate = '2023-01-01', @ToDate = '2023-12-31'` | 1 | 6 | 0 | 0 |
+
+### 4.2 Ruta de lectura utilizada por la API (`SqlPerformanceRepository` + composición en C#)
+
+La API consulta la serie diaria pre-agregada de `dbo.PortfolioDailyPerformance` y ejecuta la composición acumulada en `PerformanceCalculator` (C#) para mantener aislada y testeada la lógica de cálculo:
+
+```sql
+SET STATISTICS IO, TIME ON;
+SELECT AsOfDate, DailyReturn, PnL
+FROM dbo.PortfolioDailyPerformance
+WHERE PortfolioId = 7 AND AsOfDate >= '2015-01-01' AND AsOfDate <= '2023-08-15'
+ORDER BY AsOfDate;
+
+SELECT AsOfDate, DailyReturn, PnL
+FROM dbo.PortfolioDailyPerformance
+WHERE PortfolioId = 7 AND AsOfDate >= '2023-01-01' AND AsOfDate <= '2023-12-31'
+ORDER BY AsOfDate;
+```
+
+| Consulta API | Filas | Scans | Logical reads | CPU (ms) | Elapsed (ms) |
+|---|---:|---:|---:|---:|---:|
+| Serie diaria ITD (`2015-01-01`–`2023-08-15`) | 2.249 | 1 | 24 | 0 | 0 |
+| Serie diaria anual (`2023-01-01`–`2023-12-31`) | 260 | 1 | 6 | 0 | 0 |
 
 ### Comparativa antes vs después (Portafolio 7, año 2023)
 
-| Métrica | Antes (`usp_GetPerformance`) | Después (Range + Monthly) | Mejora |
+| Métrica | Antes (`usp_GetPerformance`) | Después (SPs SQL / Lectura API) | Mejora |
 |---|---:|---:|---:|
-| Logical reads | 16.351.886 | 12 | > 1.300.000x |
-| Tiempo de ejecución (ms) | 21.798 ms | < 2 ms | > 10.000x |
+| Logical reads | 16.351.886 | 12 (SPs) / 6 (serie diaria API) | > 1.300.000x |
+| Tiempo de ejecución SQL (ms) | 21.798 ms | < 2 ms | > 10.000x |
 | Retorno anual 2023 | +613,14% (incorrecto) | +5,33% (`0,053264`) | Corregido |
 | P&L anual 2023 | `$2.856.350,87` | `$2.856.350,87` | Consistente |
 
-Todas las consultas operan por debajo del objetivo orientativo de 200 ms.
+Todas las consultas operan muy por debajo del objetivo orientativo de 200 ms.
+
+### Nota sobre retornos diarios extremos (`r <= -100%`)
+En el conjunto sintético los retornos diarios oscilan entre `-1,98%` y `+2,02%`, por lo que `1 + DailyReturn` siempre es estrictamente positivo. Para mantener consistencia entre SQL y C# ante un eventual día con pérdida total (`DailyReturn <= -1`), `LogReturn` se guarda como `NULL` cuando `1 + DailyReturn <= 0` y los procedimientos SQL devuelven `-1.0` (`-100%`) al detectar `MIN(1.0 + DailyReturn) <= 0.0`, replicando el comportamiento de la multiplicación directa en C#.
 
 ---
 

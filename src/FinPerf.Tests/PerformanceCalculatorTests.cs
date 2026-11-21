@@ -22,6 +22,14 @@ public sealed class PerformanceCalculatorTests
     }
 
     [Fact]
+    public void CalculateCumulativeReturn_TotalLossDay_ReturnsMinus100Percent()
+    {
+        var result = PerformanceCalculator.CalculateCumulativeReturn([0.10, -1.0, 0.05]);
+
+        Assert.Equal(-1.0, result, precision: 10);
+    }
+
+    [Fact]
     public void CalculateDailyReturn_WeightedInstrumentsAAndB_Returns0Point4545Percent()
     {
         var positions = new[]

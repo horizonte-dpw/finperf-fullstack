@@ -22,14 +22,11 @@ Solución para el diagnóstico y optimización de consultas de rendimiento de po
 
 ### 1. Levantar SQL Server y cargar datos base
 
+Define el puerto a usar (por defecto `1433`; si está ocupado en tu equipo, cámbialo una sola vez en `SQL_PORT`, por ejemplo `1435`):
+
 ```bash
+export SQL_PORT=1433
 docker compose up -d
-```
-
-Si el puerto `1433` ya está ocupado en tu máquina, puedes sobrescribirlo con `SQL_PORT`:
-
-```bash
-SQL_PORT=1435 docker compose up -d
 ```
 
 Espera a que el contenedor `db-init` termine la carga inicial (~5,2 millones de filas). Puedes verificarlo con:
@@ -48,19 +45,19 @@ docker exec -i finperf-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '
 
 ### 3. Configurar cadena de conexión y ejecutar la API
 
-La cadena de conexión no se guarda en el código. Puedes configurarla con `dotnet user-secrets` o mediante variable de entorno:
+La cadena de conexión no se guarda en el código y usa el mismo `SQL_PORT` definido en el paso 1. Puedes configurarla con `dotnet user-secrets` o mediante variable de entorno:
 
 Opción A (`user-secrets`):
 
 ```bash
-dotnet user-secrets --project src/FinPerf.Api set "ConnectionStrings:FinPerf" "Server=localhost,1433;Database=FinPerf;User Id=sa;Password=FinPerf_Dev_2026!;TrustServerCertificate=True;"
+dotnet user-secrets --project src/FinPerf.Api set "ConnectionStrings:FinPerf" "Server=localhost,${SQL_PORT:-1433};Database=FinPerf;User Id=sa;Password=FinPerf_Dev_2026!;TrustServerCertificate=True;"
 dotnet run --project src/FinPerf.Api
 ```
 
 Opción B (variable de entorno):
 
 ```bash
-ConnectionStrings__FinPerf="Server=localhost,1433;Database=FinPerf;User Id=sa;Password=FinPerf_Dev_2026!;TrustServerCertificate=True;" \
+ConnectionStrings__FinPerf="Server=localhost,${SQL_PORT:-1433};Database=FinPerf;User Id=sa;Password=FinPerf_Dev_2026!;TrustServerCertificate=True;" \
   dotnet run --project src/FinPerf.Api
 ```
 
@@ -101,6 +98,7 @@ Abrir `http://localhost:5173`. Si la API corre en otra URL, definir `VITE_API_BA
 3. **Definición de ITD:** parte desde `Portfolio.InceptionDate` hasta `asOf`.
 4. **Rango válido de fechas:** se valida contra el rango real disponible para el portafolio (`MIN(AsOfDate)` y `MAX(AsOfDate)` en `PortfolioDailyPerformance`), retornando `400 Bad Request` con `ProblemDetails` fuera de ese rango o cuando `from > to`, y `404 Not Found` si el portafolio no existe.
 5. **Moneda:** todos los portafolios de prueba operan en `CLP`; el formateo en pantalla aplica formato chileno (`es-CL`).
+6. **Retornos diarios extremos (`r <= -100%`):** en los datos sintéticos el retorno diario se mueve en `[-1,98%, +2,02%]`. Aun así, tanto `PerformanceCalculator` (C#) como los procedimientos SQL tratan cualquier día con `1 + r <= 0` como pérdida total acumulada (`-100%`) para mantener ambas rutas consistentes.
 
 ---
 

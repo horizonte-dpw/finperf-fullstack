@@ -11,7 +11,7 @@ BEGIN
         PnL              DECIMAL(19,4) NOT NULL,
         MarketValueEnd   DECIMAL(19,4) NOT NULL,
         DailyReturn      FLOAT         NOT NULL,
-        LogReturn        FLOAT         NOT NULL,
+        LogReturn        FLOAT         NULL,
         UpdatedAtUtc     DATETIME2(0)  NOT NULL CONSTRAINT DF_PortfolioDailyPerformance_UpdatedAt DEFAULT SYSUTCDATETIME(),
         CONSTRAINT PK_PortfolioDailyPerformance PRIMARY KEY CLUSTERED (PortfolioId, AsOfDate),
         CONSTRAINT FK_PortfolioDailyPerformance_Portfolio FOREIGN KEY (PortfolioId) REFERENCES dbo.Portfolio (PortfolioId)
@@ -65,7 +65,7 @@ BEGIN
             PnL,
             MarketValueEnd,
             DailyReturn,
-            CASE WHEN 1.0 + DailyReturn > 0.0 THEN LOG(1.0 + DailyReturn) ELSE 0.0 END AS LogReturn
+            CASE WHEN 1.0 + DailyReturn > 0.0 THEN LOG(1.0 + DailyReturn) ELSE NULL END AS LogReturn
         FROM Calculated
     ) AS source
         ON target.PortfolioId = source.PortfolioId

@@ -24,7 +24,11 @@ BEGIN
         p.Period,
         p.FromDate,
         @AsOfDate AS ToDate,
-        CASE WHEN COUNT(d.AsOfDate) > 0 THEN EXP(SUM(d.LogReturn)) - 1.0 ELSE NULL END AS CumulativeReturn,
+        CASE
+            WHEN COUNT(d.AsOfDate) = 0 THEN NULL
+            WHEN MIN(1.0 + d.DailyReturn) <= 0.0 THEN -1.0
+            ELSE EXP(SUM(d.LogReturn)) - 1.0
+        END AS CumulativeReturn,
         SUM(d.PnL) AS PnL,
         COUNT(d.AsOfDate) AS DaysCount
     FROM (VALUES
@@ -53,7 +57,11 @@ BEGIN
     SELECT
         @FromDate AS FromDate,
         @ToDate   AS ToDate,
-        CASE WHEN COUNT(*) > 0 THEN EXP(SUM(LogReturn)) - 1.0 ELSE NULL END AS CumulativeReturn,
+        CASE
+            WHEN COUNT(*) = 0 THEN NULL
+            WHEN MIN(1.0 + DailyReturn) <= 0.0 THEN -1.0
+            ELSE EXP(SUM(LogReturn)) - 1.0
+        END AS CumulativeReturn,
         ISNULL(SUM(PnL), 0) AS PnL,
         COUNT(*) AS DaysCount
     FROM dbo.PortfolioDailyPerformance
@@ -74,7 +82,10 @@ BEGIN
     SELECT
         YEAR(AsOfDate)          AS [Year],
         MONTH(AsOfDate)         AS [Month],
-        EXP(SUM(LogReturn)) - 1.0 AS MonthlyReturn,
+        CASE
+            WHEN MIN(1.0 + DailyReturn) <= 0.0 THEN -1.0
+            ELSE EXP(SUM(LogReturn)) - 1.0
+        END                     AS MonthlyReturn,
         SUM(PnL)                AS PnL,
         COUNT(*)                AS DaysCount
     FROM dbo.PortfolioDailyPerformance
