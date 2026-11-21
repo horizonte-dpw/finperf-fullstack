@@ -1,0 +1,178 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1a1f2c;
+  background-color: #f6f7f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.page-header h1 {
+  margin: 0 0 20px;
+  font-size: 1.5rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.field select,
+.field input {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: #ffffff;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.summary-card {
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.period-badge {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.period-range {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.summary-return {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.summary-pnl {
+  font-size: 0.92rem;
+  color: #334155;
+}
+
+.summary-days {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.positive {
+  color: #157347;
+}
+
+.negative {
+  color: #b02a37;
+}
+
+.neutral {
+  color: #64748b;
+}
+
+.monthly-section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+}
+
+.monthly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.monthly-table th,
+.monthly-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf0f5;
+  white-space: nowrap;
+}
+
+.monthly-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+}
+
+.monthly-table th:first-child,
+.monthly-table td.year-col {
+  text-align: left;
+  font-weight: 700;
+  padding-left: 14px;
+  color: #1e293b;
+}
+
+.monthly-table td.empty-cell {
+  color: #94a3b8;
+}
+
+.state-box {
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  color: #475569;
+}
+
+.error-box {
+  padding: 14px 16px;
+  background: #fff5f5;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  color: #842029;
+  margin-bottom: 16px;
+}
